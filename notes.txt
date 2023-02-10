@@ -1,0 +1,23 @@
+Build notes
+* Use PlatformIO with "Raspberry Pi Pico" board
+* Update platformio with
+  platform = https://github.com/maxgerhardt/platform-raspberrypi.git
+  board_build.core = earlephilhower
+* Use Zadig to install USB drivers: RPi2 boot interface -> WinUSB
+* Had to delete a few broken packages out of C:\Users\{user}\.platformio\packages (auto-reinstalls)
+
+---
+
+Fix:
+o Weird stuck notes in other modes
+o Gate not working quite right
+o Fix double first-note in up/down mode
+
+Todo:
+o Tempo LED
+o Enable hold without turning arp on/off (fix button events)
+* Remaining LEDs / buttons
+* MIDI sync?
+* Flash in hold mode
+
+
