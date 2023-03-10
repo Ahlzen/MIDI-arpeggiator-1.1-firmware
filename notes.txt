@@ -17,7 +17,8 @@ Todo:
 o Tempo LED
 o Enable hold without turning arp on/off (fix button events)
 * Remaining LEDs / buttons
-* MIDI sync?
-* Flash in hold mode
+* Implement Chords Mode
+* Implement MIDI Sync
+* Implement Tempo Tap (sync button, tap: tempo, hold: sync on/off)
 
 

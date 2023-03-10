@@ -292,7 +292,7 @@ void ArpEngine::HandleArpeggiatorOnEvent(ulong now)
   // Advance one step (this is mode dependent)
   switch (_mode) {
     case MODE_UP:
-    case MODE_ORDER:
+    //case MODE_ORDER:
     {
       _currentNoteIndex++;
       if (_currentNoteIndex >= _noteCount) {
@@ -349,7 +349,8 @@ void ArpEngine::HandleArpeggiatorOnEvent(ulong now)
       }
       break;
     }
-    case MODE_RANDOM1:
+    //case MODE_RANDOM1:
+    case MODE_RANDOM:
     {
       if (_noteCount < 2 && _range == 0) break; // single note
       
@@ -362,17 +363,18 @@ void ArpEngine::HandleArpeggiatorOnEvent(ulong now)
       }
       break;
     }
-    case MODE_RANDOM2:
-    {
-      if (_noteCount < 2 && _range == 0) break; // single note
+    // TODO: Enable
+    // case MODE_RANDOM2:
+    // {
+    //   if (_noteCount < 2 && _range == 0) break; // single note
       
-      // Try to pick both a different note and octave than last time
-      if (_noteCount > 1) while (_currentNoteIndex == _lastNoteIndex)
-        _currentNoteIndex = random(_noteCount);
-      if (_range > 0) while (_currentOctave == _lastOctave)
-        _currentOctave = random(_range+1);
-      break;
-    }
+    //   // Try to pick both a different note and octave than last time
+    //   if (_noteCount > 1) while (_currentNoteIndex == _lastNoteIndex)
+    //     _currentNoteIndex = random(_noteCount);
+    //   if (_range > 0) while (_currentOctave == _lastOctave)
+    //     _currentOctave = random(_range+1);
+    //   break;
+    // }
     default: break;
   }
   
@@ -380,11 +382,11 @@ void ArpEngine::HandleArpeggiatorOnEvent(ulong now)
   
   byte* noteNumberList = _noteNumbersSorted;
   byte* noteVelocityList = _noteVelocitiesSorted;
-  if (_mode == MODE_ORDER) {
-    // use ordered list instead of sorted
-    noteNumberList = _noteNumbers;
-    noteVelocityList = _noteVelocities;
-  }
+  // if (_mode == MODE_ORDER) {
+  //   // use ordered list instead of sorted
+  //   noteNumberList = _noteNumbers;
+  //   noteVelocityList = _noteVelocities;
+  // }
   byte noteNumber = noteNumberList[_currentNoteIndex] + 12 * _currentOctave;
   
   // Find what velocity value to use
@@ -544,9 +546,10 @@ void ArpEngine::SetMode(int mode)
     case MODE_UP: PrintLn("Up"); break;
     case MODE_DOWN: PrintLn("Down"); break;
     case MODE_UP_DOWN: PrintLn("Up/Down"); break;
-    case MODE_ORDER: PrintLn("Order"); break;
-    case MODE_RANDOM1: PrintLn("Random1"); break;
-    case MODE_RANDOM2: PrintLn("Random2"); break;
+    //case MODE_ORDER: PrintLn("Order"); break;
+    //case MODE_RANDOM1: PrintLn("Random1"); break;
+    //case MODE_RANDOM2: PrintLn("Random2"); break;
+    case MODE_RANDOM: PrintLn("Random"); break;
     default: PrintLn("Mode error."); break;
   }
 }

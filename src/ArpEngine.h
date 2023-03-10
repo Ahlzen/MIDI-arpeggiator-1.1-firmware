@@ -22,10 +22,14 @@ public: // Constants
    static const int MODE_UP = 0;
    static const int MODE_DOWN = 1;
    static const int MODE_UP_DOWN = 2;
-   static const int MODE_ORDER = 3; // in order as played
-   static const int MODE_RANDOM1 = 4; // random: avoid same note twice in a row
-   static const int MODE_RANDOM2 = 5; // random: pick new note AND octave each time
-   static const int MODE_COUNT = 6; 
+   static const int MODE_RANDOM = 3;
+   static const int MODE_COUNT = 4;
+
+   // TODO:
+   // static const int MODE_ORDER = 3; // in order as played
+   // static const int MODE_RANDOM1 = 4; // random: avoid same note twice in a row
+   // static const int MODE_RANDOM2 = 5; // random: pick new note AND octave each time
+   // static const int MODE_COUNT = 6; 
    
    // Velocity mode
    static const int VEL_EACH = 0; // use each note's velocity value
