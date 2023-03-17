@@ -51,6 +51,8 @@ private: // Configuration
 
 private: // Internal arpeggiator state
 
+   ulong _now = 0; // current timestamp (ms)
+
    // Direction (e.g. for up/down mode)
    static const int DIR_UP = 0;
    static const int DIR_DOWN = 1;
@@ -62,10 +64,27 @@ private: // Internal arpeggiator state
    static const int MIDI_WAITING_FOR_DATA2 = 1;
    static const int MIDI_IN_SYSEX = 2;
 
+   // timing and sync
+
+   bool _midiSync = false; // true: MIDI sync mode, false: internal sync (tempo)
+
+   // For internal tempo sync
    ulong _delayMs = 150; // 1/tempo (time between beats)
    ulong _delayMsGate = 150; // gate length
    ulong _nextOnEventAt = 0;
    ulong _nextOffEventAt = 0;
+
+   // For external MIDI sync
+   // 1 MIDI beat = a 16th note = 6 clock pulses
+   
+   ulong _lastPulseAt = 0; // timestamp of last MIDI clock pulse
+   ulong _pulseCounter = 0; // current MIDI beat counter x256
+   ulong _pulsesPerNote = 4; // 6 = 1/16 notes, 24 = 1/4 notes, 96 = 1/1 notes etc.
+   ulong _noteIntervalBeats = 0; // delay between notes, in MIDI beats x256
+   ulong _gateLengthBeats = 0; // gate length, in MIDI beats x256
+   ulong _nextOnEventAtBeats = 0; // x256
+   ulong _nextOffEventAtBeats = 0; // x256
+
    int _currentNoteNumber = 0; // note currently playing
    int _currentVelocity = 0; // current note velocity (certain vel modes only)
    int _maxVelocity = 0; // max velocity played in this chord
@@ -103,14 +122,14 @@ private: // MIDI output
    void ForwardMidiData3Byte();
 
 private: // MIDI input
-   void HandleNoteOn(ulong now);
+   void HandleNoteOn();
    void HandleNoteOff();
 
 private: // Arpeggiator logic
-   void HandleMidiData(ulong now, byte data);
-   void InitArpeggio(ulong now);
+   void HandleMidiData(byte data);
+   void InitArpeggio();
    void HandleArpeggiatorOffEvent();
-   void HandleArpeggiatorOnEvent(ulong now);
+   void HandleArpeggiatorOnEvent();
 
 private: // For debugging
    template <class T> void Print(T t);
@@ -119,18 +138,23 @@ private: // For debugging
    template <class T> void PrintLn(T t, int format);
    void PrintList(byte* list, int length);
    void PrintNoteList();
-   void PrintEventSchedule(ulong now);
+   void PrintEventSchedule();
 
 public:
    // Call frequently (e.g. in inner loop)
    void Run(ulong now);
 
-   void SetEnabled(ulong now, bool enabled);
+   void SetEnabled(bool enabled);
    void SetHold(bool hold);
    void SetTempo(int tempo); // 30-300 (BPM)
+   void SetMidiSync(bool midiSyncEnabled);
    void SetGate(int gateLength); // 0..100 (%)
    void SetMode(int mode);
    void SetVelocityMode(int velocityMode);
    void SetRange(int octaves); // 0..
    int GetBeatDelayMs();
+
+   // event handlers
+   void (*midiIn)() = NULL;
+   void (*midiOut)() = NULL;
 };

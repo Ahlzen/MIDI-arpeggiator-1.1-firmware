@@ -18,7 +18,7 @@ static const int ONOFF_PIN = 18; // press: on/off, hold: chords mode
 static const int HOLD_PIN = 19;
 
 // LED pins
-static const int MIDI_OUT_LED_PIN = LED_BUILTIN;
+static const int MIDI_IN_LED_PIN = LED_BUILTIN;
 static const int TEMPO_LED_PIN = 20;
 static const int SYNC_LED_PIN = 2;
 static const int MODE_UP_LED_PIN = 3;
@@ -39,6 +39,7 @@ static const int BUTTON_DEBOUNCE_MS = 30;
 static const int BUTTON_HELD_MS = 700;
 
 // state
+ulong now; // current synchronized timestamp (ms)
 bool sync = false;
 bool enabled = false;
 bool hold = false;
@@ -59,7 +60,7 @@ Button onOffButton = Button(ONOFF_PIN, BUTTON_DEBOUNCE_MS, BUTTON_HELD_MS);
 Button holdButton = Button(HOLD_PIN, BUTTON_DEBOUNCE_MS);
 
 LedFlasher tempoLed = LedFlasher(TEMPO_LED_PIN, 40);
-LedFlasher midiOutLed = LedFlasher(MIDI_OUT_LED_PIN, 40);
+LedFlasher midiInLed = LedFlasher(MIDI_IN_LED_PIN, 20);
 
 Potentiometer tempoPot = Potentiometer(TEMPO_ADC_CHANNEL, 30, 990, 30, 300);
 Potentiometer gatePot = Potentiometer(GATE_ADC_CHANNEL, 30, 990, 0, 100);
@@ -124,7 +125,7 @@ void onOffButtonDown() {
 void onOffButtonUpNotHeld() {
   enabled = ! enabled;
   digitalWrite(ONOFF_LED_PIN, enabled);
-  arpEngine.SetEnabled(millis(), enabled);
+  arpEngine.SetEnabled(enabled);
   Serial.println(enabled ? "On" : "Off");
 }
 void onOffButtonHeld() {
@@ -136,11 +137,16 @@ void holdButtonDown() {
   arpEngine.SetHold(hold);
   Serial.println(hold ? "Hold: On" : "Hold: Off");
 }
+void onMidiIn() {
+  midiInLed.flash(now);
+}
 
 
 ////////// Initialization
 
 void setup() {
+  now = millis();
+
   Serial.begin(115200); // rate doesn't matter for USB
   Serial.println("Starting...");
 
@@ -171,7 +177,7 @@ void setup() {
   pinMode(HOLD_PIN, INPUT_PULLUP);
   
   // leds
-  pinMode(MIDI_OUT_LED_PIN, OUTPUT);
+  pinMode(MIDI_IN_LED_PIN, OUTPUT);
   pinMode(TEMPO_LED_PIN, OUTPUT);
   pinMode(SYNC_LED_PIN, OUTPUT);
   pinMode(MODE_UP_LED_PIN, OUTPUT);
@@ -196,6 +202,7 @@ void setup() {
   onOffButton.buttonUpNotHeld = onOffButtonUpNotHeld;
   onOffButton.buttonHeld = onOffButtonHeld;
   holdButton.buttonDown = holdButtonDown;
+  arpEngine.midiIn = onMidiIn;
 
   nextBlinkAt = millis();
 }
@@ -205,7 +212,7 @@ void setup() {
 
 void loop()
 {
-  long now = millis();
+  now = millis();
 
   // scan buttons
   syncButton.scan(now);
@@ -232,6 +239,7 @@ void loop()
     nextBlinkAt += arpEngine.GetBeatDelayMs() * 4;
   }
   tempoLed.run(now);
+  midiInLed.run(now);
   
   // run arpeggiator and handle MIDI input
   arpEngine.Run(now);
