@@ -14,9 +14,17 @@ lars@ahlzen.com
 class ArpEngine
 {
 public:
-   ArpEngine(HardwareSerial* midiPort, HardwareSerial* debugPort = NULL);
+   ArpEngine(
+      HardwareSerial* midiPort,
+      HardwareSerial* syncPort,
+      HardwareSerial* debugPort = NULL);
 
-public: // Constants
+public:
+   // Constants
+   static const int MIN_TEMPO = 30; // bmp
+   static const int MAX_TEMPO = 300; // bpm
+   static const int MIN_GATE = 0; // %
+   static const int MAX_GATE = 100; // %
 
    // Arpeggiator mode
    static const int MODE_UP = 0;
@@ -24,12 +32,23 @@ public: // Constants
    static const int MODE_UP_DOWN = 2;
    static const int MODE_RANDOM = 3;
    static const int MODE_COUNT = 4;
-
-   // TODO:
    // static const int MODE_ORDER = 3; // in order as played
    // static const int MODE_RANDOM1 = 4; // random: avoid same note twice in a row
    // static const int MODE_RANDOM2 = 5; // random: pick new note AND octave each time
    // static const int MODE_COUNT = 6; 
+
+   // Note length (for MIDI sync mode)
+   static const int LENGTH_WHOLE = 0;
+   static const int LENGTH_HALF = 1;
+   static const int LENGTH_THIRD = 2; // 1/4 triplet
+   static const int LENGTH_QUARTER = 3;
+   static const int LENGTH_SIXTH = 4; // 1/8 triplet
+   static const int LENGTH_EIGHTH = 5;
+   static const int LENGTH_TWELVTH = 6; // 1/16 triplet
+   static const int LENGTH_SIXTEENTH = 7;
+   static const int LENGTH_TWENTYFOURTH = 8; // 1/32 triplet
+   static const int LENGTH_THIRTYSECOND = 9;
+   static const int LENGTH_COUNT = 10;
    
    // Velocity mode
    static const int VEL_EACH = 0; // use each note's velocity value
@@ -40,6 +59,7 @@ public: // Constants
 
 private: // Configuration
    HardwareSerial* _midiPort;
+   HardwareSerial* _syncPort;
    HardwareSerial* _debugPort;
    bool _isEnabled = false;
    bool _hold = false;
@@ -76,14 +96,13 @@ private: // Internal arpeggiator state
 
    // For external MIDI sync
    // 1 MIDI beat = a 16th note = 6 clock pulses
-   
    ulong _lastPulseAt = 0; // timestamp of last MIDI clock pulse
-   ulong _pulseCounter = 0; // current MIDI beat counter x256
-   ulong _pulsesPerNote = 4; // 6 = 1/16 notes, 24 = 1/4 notes, 96 = 1/1 notes etc.
-   ulong _noteIntervalBeats = 0; // delay between notes, in MIDI beats x256
-   ulong _gateLengthBeats = 0; // gate length, in MIDI beats x256
-   ulong _nextOnEventAtBeats = 0; // x256
-   ulong _nextOffEventAtBeats = 0; // x256
+   ulong _pulseCounter = 0; // current MIDI pulse counter
+   ulong _noteIntervalPulses = 6; // delay between notes, in clock pulses
+   ulong _gateLengthPulses = 6; // gate length, in clock pulses
+   ulong _nextOnEventAtPulse = 0; 
+   ulong _nextOffEventAtPulse = 0;
+   //ulong _pulsesPerNote = 4; // 6 = 1/16 notes, 24 = 1/4 notes, 96 = 1/1 notes etc.
 
    int _currentNoteNumber = 0; // note currently playing
    int _currentVelocity = 0; // current note velocity (certain vel modes only)
@@ -126,7 +145,8 @@ private: // MIDI input
    void HandleNoteOff();
 
 private: // Arpeggiator logic
-   void HandleMidiData(byte data);
+   void HandleMidiData(byte data); // data from MIDI in port
+   void HandleSyncData(byte data); // data from sync MIDI in port
    void InitArpeggio();
    void HandleArpeggiatorOffEvent();
    void HandleArpeggiatorOnEvent();

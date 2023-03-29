@@ -4,6 +4,11 @@
 #include "LedFlasher.h"
 #include "ArpEngine.h"
 
+// Serial pins
+static const int MIDI_IN_PIN = 1;
+static const int MIDI_OUT_PIN = 0;
+static const int MIDI_SYNC_IN_PIN = 5;
+
 // ADC pins
 static const int TEMPO_PIN = 26;
 static const int TEMPO_ADC_CHANNEL = A0;
@@ -22,8 +27,8 @@ static const int MIDI_IN_LED_PIN = LED_BUILTIN;
 static const int TEMPO_LED_PIN = 20;
 static const int SYNC_LED_PIN = 2;
 static const int MODE_UP_LED_PIN = 3;
-static const int MODE_DOWN_LED_PIN = 4;
-static const int MODE_UP_DOWN_LED_PIN = 5;
+static const int MODE_DOWN_LED_PIN = 21;
+static const int MODE_UP_DOWN_LED_PIN = 22;
 static const int MODE_RANDOM_LED_PIN = 6;
 static const int OCT1_LED_PIN = 7;
 static const int OCT2_LED_PIN = 8;
@@ -62,11 +67,12 @@ Button holdButton = Button(HOLD_PIN, BUTTON_DEBOUNCE_MS);
 LedFlasher tempoLed = LedFlasher(TEMPO_LED_PIN, 40);
 LedFlasher midiInLed = LedFlasher(MIDI_IN_LED_PIN, 20);
 
-Potentiometer tempoPot = Potentiometer(TEMPO_ADC_CHANNEL, 30, 990, 30, 300);
-Potentiometer gatePot = Potentiometer(GATE_ADC_CHANNEL, 30, 990, 0, 100);
+Potentiometer tempoPot = Potentiometer(TEMPO_ADC_CHANNEL,
+  30, 990, ArpEngine::MIN_TEMPO, ArpEngine::MAX_TEMPO);
+Potentiometer gatePot = Potentiometer(GATE_ADC_CHANNEL,
+  30, 990, ArpEngine::MIN_GATE, ArpEngine::MAX_GATE);
 
-
-ArpEngine arpEngine = ArpEngine(&Serial1, &Serial);
+ArpEngine arpEngine = ArpEngine(&Serial1, &Serial2, &Serial);
 
 
 ////////// Helpers
@@ -150,13 +156,18 @@ void setup() {
   Serial.begin(115200); // rate doesn't matter for USB
   Serial.println("Starting...");
 
-  // MIDI In/Out (serial1)
-  pinMode(0, OUTPUT); // UART0 TX (Serial1)
-  pinMode(1, INPUT); // UART0 RX (Serial1)
-  Serial1.setTX(0);
-  Serial1.setRX(1);
+  // MIDI In/Out (Serial1)
+  pinMode(MIDI_OUT_PIN, OUTPUT); // UART0 TX (Serial1)
+  pinMode(MIDI_IN_PIN, INPUT); // UART0 RX (Serial1)
+  Serial1.setTX(MIDI_OUT_PIN);
+  Serial1.setRX(MIDI_IN_PIN);
   Serial1.setFIFOSize(256);
   Serial1.begin(31250);
+  // MIDI Sync In (Serial2)
+  pinMode(MIDI_SYNC_IN_PIN, INPUT); // UART1 RX (Serial2)
+  Serial2.setRX(MIDI_SYNC_IN_PIN);
+  Serial2.setFIFOSize(256);
+  Serial2.begin(31250);
 
   // force SMPS PWM mode for all loads
   // for reduced ripple and thus improved ADC performance

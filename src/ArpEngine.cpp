@@ -4,9 +4,11 @@
 
 ArpEngine::ArpEngine(
   HardwareSerial* midiPort,
+  HardwareSerial* syncPort,
   HardwareSerial* debugPort)
 {
   _midiPort = midiPort;
+  _syncPort = syncPort;
   _debugPort = debugPort;
   _now = millis(); // initial value, then supplied through run()
 }
@@ -225,30 +227,30 @@ void ArpEngine::HandleMidiData(byte data)
       // }
       //_lastPulseAt = now;
       
-      if (_midiSync)
-      {
-        // Estimate tempo. Doesn't have to be perfect,
-        // just close enough to roughly interpolate between
-        // clock pulses.
-        if (_lastPulseAt != 0) {
-          ulong pulseDurationMs = _now - _lastPulseAt;
-          if (pulseDurationMs > 0) {
-            // 24 clock pulses per quarter
-            uint msPerSixteenth = 6 * pulseDurationMs;
-            uint sixteenthsPerMinute = 60 * 1000 / msPerSixteenth;
-            _delayMs = msPerSixteenth;
-            _tempo = sixteenthsPerMinute / 4;
-          }
-        }
+      // if (_midiSync)
+      // {
+      //   // Estimate tempo. Doesn't have to be perfect,
+      //   // just close enough to roughly interpolate between
+      //   // clock pulses.
+      //   if (_lastPulseAt != 0) {
+      //     ulong pulseDurationMs = _now - _lastPulseAt;
+      //     if (pulseDurationMs > 0) {
+      //       // 24 clock pulses per quarter
+      //       uint msPerSixteenth = 6 * pulseDurationMs;
+      //       uint sixteenthsPerMinute = 60 * 1000 / msPerSixteenth;
+      //       _delayMs = msPerSixteenth;
+      //       _tempo = sixteenthsPerMinute / 4;
+      //     }
+      //   }
 
-        // TEST
-        if (_pulseCounter & 32) {
-          Print("MIDI tempo: ");
-          PrintLn(_tempo);
-        }
-      }
-      _lastPulseAt = _now;
-      _pulseCounter++;
+      //   // TEST
+      //   if (_pulseCounter & 32) {
+      //     Print("MIDI tempo: ");
+      //     PrintLn(_tempo);
+      //   }
+      // }
+      // _lastPulseAt = _now;
+      // _pulseCounter++;
     } else if (data == 0xfa) {
       // Start: pass through (for now)
       ForwardMidiData(data);
@@ -309,6 +311,15 @@ void ArpEngine::HandleMidiData(byte data)
   }
 }
 
+void ArpEngine::HandleSyncData(byte data)
+{
+  if (data == 0xf8) {
+    // MIDI clock pulse
+    _pulseCounter++;
+    _lastPulseAt = _now;
+  }
+}
+
 void ArpEngine::InitArpeggio()
 {
   PrintLn("InitArpeggio()");
@@ -323,8 +334,16 @@ void ArpEngine::InitArpeggio()
     default:
       _currentDirection = DIR_UP; break;
   }
-  _nextOnEventAt = _now + _delayMs;
-  _nextOffEventAt = _now + _delayMsGate;
+
+  if (_midiSync) {
+    _nextOnEventAtPulse = _pulseCounter + _noteIntervalPulses;
+    _nextOffEventAtPulse = _pulseCounter + _gateLengthPulses;
+  }
+  else {
+    _nextOnEventAt = _now + _delayMs;
+    _nextOffEventAt = _now + _delayMsGate;
+  }
+  
   PrintEventSchedule();
   _maxVelocity = _noteVelocities[0];
 }
@@ -496,9 +515,11 @@ void ArpEngine::PrintNoteList() {
   PrintLn("");
 }
 void ArpEngine::PrintEventSchedule() {
-  Print("Now: "); Print(_now);
-  Print("  Next event on/off: "); Print(_nextOnEventAt);
-  Print(" "); Print(_nextOffEventAt);
+  Print("Now: "); Print(_midiSync ? _pulseCounter : _now);
+  Print("  Next event on/off: ");
+  Print(_midiSync ? _nextOnEventAtPulse : _nextOnEventAt);
+  Print(" ");
+  Print(_midiSync ? _nextOffEventAtPulse : _nextOffEventAt);
   PrintLn("");
 }
 
@@ -512,16 +533,31 @@ void ArpEngine::Run(ulong now)
   // Run events
   if (_isEnabled && _noteCount > 0)
   {
-    if (_now >= _nextOffEventAt && _nextOffEventAt > 0) {
-      HandleArpeggiatorOffEvent();
-      _nextOffEventAt = 0;
-      PrintEventSchedule();
+    if (_midiSync)
+    {
+      if (_pulseCounter >= _nextOffEventAtPulse && _nextOffEventAtPulse > 0) {
+        HandleArpeggiatorOffEvent();
+        _nextOffEventAtPulse = 0;
+        PrintEventSchedule();
+      }
+      if (_pulseCounter >= _nextOnEventAtPulse) {
+        HandleArpeggiatorOnEvent();
+        _nextOnEventAt = _pulseCounter + _noteIntervalPulses;
+      }
     }
-    if (_now >= _nextOnEventAt) {
-      HandleArpeggiatorOnEvent();
-      _nextOnEventAt = _now + _delayMs;
-      _nextOffEventAt = _now + _delayMsGate;
-      PrintEventSchedule();
+    else
+    {
+      if (_now >= _nextOffEventAt && _nextOffEventAt > 0) {
+        HandleArpeggiatorOffEvent();
+        _nextOffEventAt = 0;
+        PrintEventSchedule();
+      }
+      if (_now >= _nextOnEventAt) {
+        HandleArpeggiatorOnEvent();
+        _nextOnEventAt = _now + _delayMs;
+        _nextOffEventAt = _now + _delayMsGate;
+        PrintEventSchedule();
+      }
     }
   }
 
@@ -530,6 +566,11 @@ void ArpEngine::Run(ulong now)
     byte data = _midiPort->read();
     HandleMidiData(data);
     if (midiIn != NULL) midiIn();
+  }
+  // Handle sync data
+  while (_syncPort->available() > 0) {
+    byte data = _syncPort->read();
+    HandleSyncData(data);
   }
 }
 
@@ -569,11 +610,28 @@ void ArpEngine::SetHold(bool hold)
   }
 }
 
-void ArpEngine::SetTempo(int tempo) // 30..300 (BPM)
+void ArpEngine::SetTempo(int tempo)
 {
   _tempo = tempo;
   _delayMs = ((ulong)60000/4)/tempo;
   _delayMsGate = _delayMs * _gate / 100;
+
+  // Set note interval in pulses (for MIDI sync mode)
+  int lengthMode = (tempo-MIN_TEMPO)*LENGTH_COUNT/(MAX_TEMPO-MIN_TEMPO);
+  switch (lengthMode) {
+    // 6 pulses per 1/16 note
+    case LENGTH_WHOLE: _noteIntervalPulses = 96; break;
+    case LENGTH_HALF: _noteIntervalPulses = 48; break;
+    case LENGTH_THIRD: _noteIntervalPulses = 36; break;
+    case LENGTH_QUARTER: _noteIntervalPulses = 24; break;
+    case LENGTH_SIXTH: _noteIntervalPulses = 18; break;
+    case LENGTH_EIGHTH: _noteIntervalPulses = 12; break;
+    case LENGTH_TWELVTH: _noteIntervalPulses = 8; break;
+    case LENGTH_SIXTEENTH: _noteIntervalPulses = 6; break;
+    case LENGTH_TWENTYFOURTH: _noteIntervalPulses = 4; break;
+    case LENGTH_THIRTYSECOND: default: _noteIntervalPulses = 3; break;
+  }
+  _gateLengthPulses = _noteIntervalPulses; // TODO: compute actual gate length
 
   Print("Tempo: "); Print(_tempo);
   Print(", _delayMs: "); Print(_delayMs);
@@ -592,7 +650,13 @@ void ArpEngine::SetGate(int gateLength) // 0..100 (%)
 
 void ArpEngine::SetMidiSync(bool midiSyncEnabled)
 {
+  // NOTE: To ensure everything is set up correctly,
+  // we temporarily turn the arpeggiator off
+  // if running
+  bool wasEnabled = _isEnabled;
+  if (_isEnabled) SetEnabled(false);
   _midiSync = midiSyncEnabled;
+  if (wasEnabled) SetEnabled(true);
   Print("MIDI Sync: ");
   Print(midiSyncEnabled ? "on" : "off");
 }
