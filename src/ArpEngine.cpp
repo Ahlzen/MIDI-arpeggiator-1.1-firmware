@@ -104,7 +104,7 @@ void ArpEngine::SendNoteOn(byte noteNumber, byte noteVelocity) {
   _midiPort->write(noteNumber);
   _midiPort->write(noteVelocity);
   //Print("SendNoteOn: "); PrintLn(noteNumber);
-  if (midiOut != NULL) midiOut();
+  if (onMidiOut != NULL) onMidiOut();
 }
 
 void ArpEngine::SendNoteOff(byte noteNumber) {
@@ -112,25 +112,25 @@ void ArpEngine::SendNoteOff(byte noteNumber) {
   _midiPort->write(noteNumber);
   _midiPort->write((uint8_t)0); // velocity 0 = note off
   //Print("SendNoteOff: "); PrintLn(noteNumber);
-  if (midiOut != NULL) midiOut();
+  if (onMidiOut != NULL) onMidiOut();
 }
 
 void ArpEngine::ForwardMidiData(byte data) {
   _midiPort->write(data);
-  if (midiOut != NULL) midiOut();
+  if (onMidiOut != NULL) onMidiOut();
 }
 
 void ArpEngine::ForwardMidiData2Byte() {
   _midiPort->write(_midiStatus + _midiChannel);
   _midiPort->write(_midiData1);
-  if (midiOut != NULL) midiOut();
+  if (onMidiOut != NULL) onMidiOut();
 }
 
 void ArpEngine::ForwardMidiData3Byte() {
   _midiPort->write(_midiStatus + _midiChannel);
   _midiPort->write(_midiData1);
   _midiPort->write(_midiData2);
-  if (midiOut != NULL) midiOut();
+  if (onMidiOut != NULL) onMidiOut();
 }
 
 
@@ -565,12 +565,26 @@ void ArpEngine::Run(ulong now)
   while (_midiPort->available() > 0) {
     byte data = _midiPort->read();
     HandleMidiData(data);
-    if (midiIn != NULL) midiIn();
+    if (onMidiIn != NULL) onMidiIn();
   }
   // Handle sync data
   while (_syncPort->available() > 0) {
     byte data = _syncPort->read();
     HandleSyncData(data);
+  }
+
+  // onBeat event
+  if (_midiSync) {
+    if (_pulseCounter >= _nextBeatEventAtPulse) {
+      _nextBeatEventAtPulse = _pulseCounter + _noteIntervalPulses;
+      if (onBeat != NULL) onBeat();
+    }
+  }
+  else {
+    if (_now >= _nextBeatEventAt) {
+      _nextBeatEventAt = _now + _delayMs;
+      if (onBeat != NULL) onBeat();
+    }
   }
 }
 
@@ -689,8 +703,8 @@ void ArpEngine::SetRange(int extraOctaves)
   _range = extraOctaves;
 }
 
-int ArpEngine::GetBeatDelayMs()
-{
-  // TODO: add MIDI sync support
-  return _delayMs;
-}
+// int ArpEngine::GetBeatDelayMs()
+// {
+//   // TODO: add MIDI sync support
+//   return _delayMs;
+// }

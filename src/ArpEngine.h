@@ -93,16 +93,17 @@ private: // Internal arpeggiator state
    ulong _delayMsGate = 150; // gate length
    ulong _nextOnEventAt = 0;
    ulong _nextOffEventAt = 0;
+   ulong _nextBeatEventAt = 0; // onBeat event timer
 
    // For external MIDI sync
    // 1 MIDI beat = a 16th note = 6 clock pulses
    ulong _lastPulseAt = 0; // timestamp of last MIDI clock pulse
    ulong _pulseCounter = 0; // current MIDI pulse counter
-   ulong _noteIntervalPulses = 6; // delay between notes, in clock pulses
-   ulong _gateLengthPulses = 6; // gate length, in clock pulses
+   ulong _noteIntervalPulses = 12; // delay between notes, in clock pulses
+   ulong _gateLengthPulses = 12; // gate length, in clock pulses
    ulong _nextOnEventAtPulse = 0; 
    ulong _nextOffEventAtPulse = 0;
-   //ulong _pulsesPerNote = 4; // 6 = 1/16 notes, 24 = 1/4 notes, 96 = 1/1 notes etc.
+   ulong _nextBeatEventAtPulse = 0; // onBeat event timer
 
    int _currentNoteNumber = 0; // note currently playing
    int _currentVelocity = 0; // current note velocity (certain vel modes only)
@@ -172,9 +173,9 @@ public:
    void SetMode(int mode);
    void SetVelocityMode(int velocityMode);
    void SetRange(int octaves); // 0..
-   int GetBeatDelayMs();
-
+   
    // event handlers
-   void (*midiIn)() = NULL;
-   void (*midiOut)() = NULL;
+   void (*onMidiIn)() = NULL; // called on any MIDI in event
+   void (*onMidiOut)() = NULL; // called on any MIDI out event
+   void (*onBeat)() = NULL; // called once per beat, e.g. for tempo blink
 };

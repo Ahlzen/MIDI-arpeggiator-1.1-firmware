@@ -53,7 +53,6 @@ int type = ArpEngine::MODE_UP;
 int tempo = 100;
 int gate = 100;
 int status_led = false;
-long nextBlinkAt = 0; // blink timer
 
 
 ////////// I/O
@@ -99,6 +98,7 @@ void setOctLed(int pin) {
 void syncButtonDown() {
   sync = ! sync;
   digitalWrite(SYNC_LED_PIN, sync);
+  arpEngine.SetMidiSync(sync);
   Serial.println(sync ? "Sync: On" : "Sync: Off");
 }
 void modeButtonDown() {
@@ -145,6 +145,9 @@ void holdButtonDown() {
 }
 void onMidiIn() {
   midiInLed.flash(now);
+}
+void onBeat() {
+  tempoLed.flash(now);
 }
 
 
@@ -207,15 +210,15 @@ void setup() {
   setOctLed(OCT1_LED_PIN); // initial value
 
   // Initialize event handlers
+  syncButton.buttonDown = syncButtonDown;
   modeButton.buttonDown = modeButtonDown;
   octButton.buttonDown = octButtonDown;
   onOffButton.buttonDown = onOffButtonDown;
   onOffButton.buttonUpNotHeld = onOffButtonUpNotHeld;
   onOffButton.buttonHeld = onOffButtonHeld;
   holdButton.buttonDown = holdButtonDown;
-  arpEngine.midiIn = onMidiIn;
-
-  nextBlinkAt = millis();
+  arpEngine.onMidiIn = onMidiIn;
+  arpEngine.onBeat = onBeat;
 }
 
 
@@ -223,6 +226,8 @@ void setup() {
 
 void loop()
 {
+  // single reading to ensure everything is
+  // synchronized
   now = millis();
 
   // scan buttons
@@ -244,11 +249,7 @@ void loop()
     arpEngine.SetGate(gate);
   }
   
-  // run "tempo" blink
-  if (now >= nextBlinkAt) {
-    tempoLed.flash(now);
-    nextBlinkAt += arpEngine.GetBeatDelayMs() * 4;
-  }
+  // update LEDs
   tempoLed.run(now);
   midiInLed.run(now);
   
