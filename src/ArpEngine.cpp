@@ -553,8 +553,9 @@ void ArpEngine::Run(ulong now)
         HandleArpeggiatorOnEvent();
         _nextOnEventAtPulse = _pulseCounter + _noteIntervalPulses;
         if (_quantize) {
-          // snap next event to the next multiple of the note interval
-          _nextOnEventAtPulse -= _nextOnEventAtPulse % _noteIntervalPulses;
+          // Snap next event to nearest multiple of the note interval
+          _nextOnEventAtPulse += _noteIntervalPulses/2; // add half interval...
+          _nextOnEventAtPulse -= _nextOnEventAtPulse % _noteIntervalPulses; // ... then truncate (round down)
         }
         _nextOffEventAtPulse = MIN(
           _pulseCounter + _gateLengthPulses, _nextOnEventAtPulse);
