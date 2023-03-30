@@ -542,7 +542,9 @@ void ArpEngine::Run(ulong now)
       }
       if (_pulseCounter >= _nextOnEventAtPulse) {
         HandleArpeggiatorOnEvent();
-        _nextOnEventAt = _pulseCounter + _noteIntervalPulses;
+        _nextOnEventAtPulse = _pulseCounter + _noteIntervalPulses;
+        _nextOffEventAtPulse = _pulseCounter + _gateLengthPulses;
+        PrintEventSchedule();
       }
     }
     else
