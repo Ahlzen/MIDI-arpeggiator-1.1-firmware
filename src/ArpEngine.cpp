@@ -318,6 +318,15 @@ void ArpEngine::HandleSyncData(byte data)
     _pulseCounter++;
     _lastPulseAt = _now;
   }
+  else if (data == 0xfa) {
+    // MIDI start. Reset pulse counter etc
+    // (so that quantization works)
+    // EXPERIMENTAL!
+    _pulseCounter = 0;
+    _nextOnEventAtPulse = 0;
+    _nextOffEventAtPulse = 0;
+    _nextBeatEventAtPulse = 0;
+  }
 }
 
 void ArpEngine::InitArpeggio()
@@ -543,7 +552,13 @@ void ArpEngine::Run(ulong now)
       if (_pulseCounter >= _nextOnEventAtPulse) {
         HandleArpeggiatorOnEvent();
         _nextOnEventAtPulse = _pulseCounter + _noteIntervalPulses;
-        _nextOffEventAtPulse = _pulseCounter + _gateLengthPulses;
+        if (_quantize) {
+          // snap next event to the next multiple of the note interval
+          _nextOnEventAtPulse -= _nextOnEventAtPulse % _noteIntervalPulses;
+        }
+        _nextOffEventAtPulse = MIN(
+          _pulseCounter + _gateLengthPulses, _nextOnEventAtPulse);
+        
         PrintEventSchedule();
       }
     }
