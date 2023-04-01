@@ -104,7 +104,7 @@ private: // Internal arpeggiator state
    ulong _nextOnEventAtPulse = 0; 
    ulong _nextOffEventAtPulse = 0;
    ulong _nextBeatEventAtPulse = 0; // onBeat event timer
-   bool _quantize = true; // snap to nearest note on MIDI clock
+   bool _snapToBeat = true; // snap notes to nearest beat on MIDI clock
 
    int _currentNoteNumber = 0; // note currently playing
    int _currentVelocity = 0; // current note velocity (certain vel modes only)

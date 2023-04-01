@@ -31,6 +31,7 @@ Missing features
 * Enable hold without turning arp on/off (fix button events) [Done]
 * Remaining LEDs / buttons [Done]
 * Implement MIDI Sync [Done]
+* 
 * Implement Chords Mode (only arpeggiate when 2 or more keys held)
 * Implement Tempo Tap (sync button, tap: tempo, hold: sync on/off)
 

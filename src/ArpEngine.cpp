@@ -1,4 +1,5 @@
 #include "common.h"
+#include "MIDI.h"
 #include "ArpEngine.h"
 
 
@@ -204,7 +205,7 @@ void ArpEngine::HandleMidiData(byte data)
 {
   if (_midiState == MIDI_IN_SYSEX) {
     ForwardMidiData(data);
-    if (data == 0xF7) {
+    if (data == MidiEndOfExclusive) {
       // end of SysEx
       _midiState = MIDI_WAITING_FOR_STATUS_OR_DATA1;
       _midiStatus = 0;
@@ -212,65 +213,22 @@ void ArpEngine::HandleMidiData(byte data)
     return;
   }
   
-  if (data & 0b10000000) {
+  if (data & MidiStatusByteMask) {
     // status byte
-    if (data == 0xf0) {
+    if (data == MidiStartOfExclusive) {
       // start of SysEx
       ForwardMidiData(data);
       _midiState = MIDI_IN_SYSEX;
-    } else if (data == 0xf8) {
-      // MIDI clock pulse
-      // if (_lastPulseAt != 0)
-      // {
-      //   ulong pulseLengthms = now - _lastPulseAt;
-
-      // }
-      //_lastPulseAt = now;
-      
-      // if (_midiSync)
-      // {
-      //   // Estimate tempo. Doesn't have to be perfect,
-      //   // just close enough to roughly interpolate between
-      //   // clock pulses.
-      //   if (_lastPulseAt != 0) {
-      //     ulong pulseDurationMs = _now - _lastPulseAt;
-      //     if (pulseDurationMs > 0) {
-      //       // 24 clock pulses per quarter
-      //       uint msPerSixteenth = 6 * pulseDurationMs;
-      //       uint sixteenthsPerMinute = 60 * 1000 / msPerSixteenth;
-      //       _delayMs = msPerSixteenth;
-      //       _tempo = sixteenthsPerMinute / 4;
-      //     }
-      //   }
-
-      //   // TEST
-      //   if (_pulseCounter & 32) {
-      //     Print("MIDI tempo: ");
-      //     PrintLn(_tempo);
-      //   }
-      // }
-      // _lastPulseAt = _now;
-      // _pulseCounter++;
-    } else if (data == 0xfa) {
-      // Start: pass through (for now)
-      ForwardMidiData(data);
-      _midiStatus = 0;
-    } else if (data == 0xfb) {
-      // Continue: pass through (for now)
-      ForwardMidiData(data);
-      _midiStatus = 0;
-    } else if (data == 0xfc) {
-      // Stop: pass through (for now)
-      ForwardMidiData(data);
-      _midiStatus = 0;
-    } else if ((data & 0xf0) == 0xf0) {
-      // other system message: pass through
+    }
+    else if ((data & MidiStatusMask) == MidiStatusSystemMessage) {
+      // Other system message: pass through
+      // (these are only relevant on the sync port)
       ForwardMidiData(data);
       _midiStatus = 0;
     } else {
       // channel message
-      _midiStatus = data & 0xf0;
-      _midiChannel = data & 0x0f;
+      _midiStatus = data & MidiStatusMask;
+      _midiChannel = data & MidiChannelMask;
       _midiState = MIDI_WAITING_FOR_STATUS_OR_DATA1;
     }
   } else {
@@ -279,15 +237,15 @@ void ArpEngine::HandleMidiData(byte data)
       case MIDI_WAITING_FOR_STATUS_OR_DATA1: // first data byte
         _midiData1 = data;
         switch (_midiStatus) {
-          case 0x80: // note off
-          case 0x90: // note on
-          case 0xa0: // poly key pressure
-          case 0xb0: // control change
-          case 0xe0: // pitch bend
+          case MidiStatusNoteOff:
+          case MidiStatusNoteOn:
+          case MidiStatusPolyPressure:
+          case MidiStatusControlChange:
+          case MidiStatusPitchBend:
             _midiState = MIDI_WAITING_FOR_DATA2;
             break;
-          case 0xc0: // program change
-          case 0xd0: // channel pressure
+          case MidiStatusProgramChange:
+          case MidiStatusChannelPressure:
             ForwardMidiData2Byte(); // pass-through
             break;
         }
@@ -295,10 +253,10 @@ void ArpEngine::HandleMidiData(byte data)
       case MIDI_WAITING_FOR_DATA2: // second data byte
         _midiData2 = data;
         switch (_midiStatus) {
-          case 0x80: // note off
+          case MidiStatusNoteOff:
             HandleNoteOff();
             break;
-          case 0x90: // note on
+          case MidiStatusNoteOn:
             HandleNoteOn();
             break;
           default: // other
@@ -313,15 +271,12 @@ void ArpEngine::HandleMidiData(byte data)
 
 void ArpEngine::HandleSyncData(byte data)
 {
-  if (data == 0xf8) {
-    // MIDI clock pulse
+  if (data == MidiTimingClock) {
     _pulseCounter++;
     _lastPulseAt = _now;
   }
-  else if (data == 0xfa) {
-    // MIDI start. Reset pulse counter etc
-    // (so that quantization works)
-    // EXPERIMENTAL!
+  else if (data == MidiStart) {
+    // Reset pulse counter etc so snap-to-beat/quantization works
     _pulseCounter = 0;
     _nextOnEventAtPulse = 0;
     _nextOffEventAtPulse = 0;
@@ -552,7 +507,7 @@ void ArpEngine::Run(ulong now)
       if (_pulseCounter >= _nextOnEventAtPulse) {
         HandleArpeggiatorOnEvent();
         _nextOnEventAtPulse = _pulseCounter + _noteIntervalPulses;
-        if (_quantize) {
+        if (_snapToBeat) {
           // Snap next event to nearest multiple of the note interval
           _nextOnEventAtPulse += _noteIntervalPulses/2; // add half interval...
           _nextOnEventAtPulse -= _nextOnEventAtPulse % _noteIntervalPulses; // ... then truncate (round down)

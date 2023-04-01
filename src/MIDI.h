@@ -3,15 +3,18 @@
 
 // Channel Voice Status
 
-static const uint8_t MidiStatusMask = 0xF0;
+static const uint8_t MidiStatusByteMask = 0b10000000;
+static const uint8_t MidiStatusMask = 0xf0;
+static const uint8_t MidiChannelMask = 0x0f;
 
 static const uint8_t MidiStatusNoteOff = 0x80; // data1 = note, data2 = velocity
 static const uint8_t MidiStatusNoteOn = 0x90; // data1 = note, data2 = velocity (0 = note off)
-static const uint8_t MidiStatusPolyPressure = 0xA0; // data1 = note, data2 = pressure
-static const uint8_t MidiStatusControlChange = 0xB0; // data1 = cc number, data2 = value
-static const uint8_t MidiStatusProgramChange = 0xC0; // data1 = program number
-static const uint8_t MidiStatusChannelPressure = 0xD0; // data1 = pressure
-static const uint8_t MidiStatusPitchBend = 0xE0; // data1 = lsb, data2 = msb
+static const uint8_t MidiStatusPolyPressure = 0xa0; // data1 = note, data2 = pressure
+static const uint8_t MidiStatusControlChange = 0xb0; // data1 = cc number, data2 = value
+static const uint8_t MidiStatusProgramChange = 0xc0; // data1 = program number
+static const uint8_t MidiStatusChannelPressure = 0xd0; // data1 = pressure
+static const uint8_t MidiStatusPitchBend = 0xe0; // data1 = lsb, data2 = msb
+static const uint8_t MidiStatusSystemMessage = 0xf0;
 
 // Channel Mode messages (CC) (selected)
 

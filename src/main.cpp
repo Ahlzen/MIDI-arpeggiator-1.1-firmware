@@ -249,7 +249,7 @@ void loop()
     arpEngine.SetGate(gate);
   }
   
-  // update LEDs
+  // update blinky LEDs
   tempoLed.run(now);
   midiInLed.run(now);
   
