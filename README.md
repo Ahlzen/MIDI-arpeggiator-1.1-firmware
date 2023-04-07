@@ -5,6 +5,9 @@ Firmware for MIDI Arpeggiator v1.1
 
 For Raspberry Pi Pico / RP2040
 
+Schematics and PCB design at
+https://github.com/Ahlzen/MIDI-arpeggiator-1.1-electronics
+
 TODO: More details
 
 ## Build notes
