@@ -10,6 +10,42 @@ static const int MIDI_OUT_PIN = 0;
 static const int MIDI_SYNC_IN_PIN = 5;
 
 // ADC pins
+static const int TEMPO_PIN = 27;
+static const int TEMPO_ADC_CHANNEL = A1;
+static const int GATE_PIN = 26;
+static const int GATE_ADC_CHANNEL = A0;
+
+// Button pins
+static const int SYNC_PIN = 22;
+static const int MODE_PIN = 9;
+static const int OCT_PIN = 14;
+static const int ONOFF_PIN = 8;
+static const int HOLD_PIN = 2; // press: hold on/off, hold: chords mode
+
+// LED pins
+static const int MIDI_IN_LED_PIN = LED_BUILTIN;
+static const int TEMPO_LED_PIN = 21;
+static const int SYNC_LED_PIN = 20;
+static const int MODE_UP_LED_PIN = 13;
+static const int MODE_DOWN_LED_PIN = 12;
+static const int MODE_UP_DOWN_LED_PIN = 11;
+static const int MODE_RANDOM_LED_PIN = 10;
+static const int OCT1_LED_PIN = 15;
+static const int OCT2_LED_PIN = 16;
+static const int OCT3_LED_PIN = 17;
+static const int OCT4_LED_PIN = 18;
+static const int OCT5_LED_PIN = 19;
+static const int ONOFF_LED_PIN = 7;
+static const int CHORDS_LED_PIN = 6;
+static const int HOLD_LED_PIN = 3;
+
+/*
+// This is the old pin configuration from the breadboard prototype.
+// (the pins were later changed to optimize PCB layout)
+// I'm keeping this around temporarily since I don't want
+// to rip all those wires up...
+
+// ADC pins
 static const int TEMPO_PIN = 26;
 static const int TEMPO_ADC_CHANNEL = A0;
 static const int GATE_PIN = 27;
@@ -38,6 +74,7 @@ static const int OCT5_LED_PIN = 11;
 static const int ONOFF_LED_PIN = 12;
 static const int CHORDS_LED_PIN = 13;
 static const int HOLD_LED_PIN = 14;
+*/
 
 // Constants
 static const int BUTTON_DEBOUNCE_MS = 30;
