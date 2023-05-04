@@ -36,8 +36,8 @@ static const int OCT3_LED_PIN = 17;
 static const int OCT4_LED_PIN = 18;
 static const int OCT5_LED_PIN = 19;
 static const int ONOFF_LED_PIN = 7;
-static const int CHORDS_LED_PIN = 6;
-static const int HOLD_LED_PIN = 3;
+static const int CHORDS_LED_PIN = 3;
+static const int HOLD_LED_PIN = 6;
 
 /*
 // This is the old pin configuration from the breadboard prototype.
